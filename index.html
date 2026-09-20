@@ -191,7 +191,8 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxjXD0nyAddddF9tsBUGxdWfczHdtU-zGjWuedW7HynxXo8eLqEvzd_ZEMjcMMnq8TF/exec"; // ඔයාගේ Web App URL එක
+        // මෙතැනට ඔයාගේ Google Apps Script Web App URL එක දාන්න
+        const API_URL = "https://script.google.com/macros/s/AKfycbw0ASCt1USrG4po0TiJUzD9qbzmk8i2iy913cG4RM03kKJtb_tJQwCjt09UtjO3QJpu/exec";
 
         let tg = window.Telegram.WebApp;
         tg.expand();
@@ -240,7 +241,6 @@
                 container.innerHTML += html;
             });
 
-            // Check timers for all ads
             updateAllTimers();
             setInterval(updateAllTimers, 1000);
         }
@@ -289,7 +289,6 @@
                     clearInterval(countdownInterval);
                     modal.style.display = "none";
                     
-                    // Set 30 mins cooldown timestamp in LocalStorage
                     localStorage.setItem(`cooldown_${activeAdId}`, new Date().getTime());
                     updateAllTimers();
 
@@ -321,13 +320,12 @@
                 return;
             }
 
-            // If points >= 1000, process withdraw request
-            fetch(`${API_URL}?action=withdraw&id=${telegramId}`)
+            fetch(`${API_URL}?action=withdraw&id=${telegramId}&username=${username}`)
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === "success") {
                         document.getElementById("points-display").innerText = data.points;
-                        showInfoModal("Withdrawal Pending", `✅ **Request Submitted Successfully!**<br><br>Account: @${username}<br>Status: <b>Pending</b><br>Your stars will be transferred within **1-3 working days** after verification.`);
+                        showInfoModal("Withdrawal Pending", `✅ **Request Submitted Successfully!**<br><br>Account: @${username}<br>Status: <b>Pending</b><br>Your withdrawal will be completed within **1-3 working days**.`);
                     } else {
                         showInfoModal("Notice", data.message);
                     }
@@ -335,7 +333,7 @@
         }
 
         function showInfoModal(title, desc) {
-            document.getElementById("modalTitle").innerHTML = title;
+            document.getElementById("modalTitleinnerHTML" in document.getElementById("modalTitle") ? "modalTitle" : "modalTitle").innerHTML = title;
             document.getElementById("modalDesc").innerHTML = desc;
             document.getElementById("infoModal").style.display = "flex";
         }
@@ -344,8 +342,8 @@
             document.getElementById("infoModal").style.display = "none";
         }
 
-        // Initial Load
         loadAppData();
     </script>
 </body>
 </html>
+```[cite: 2]
