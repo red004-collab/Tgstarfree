@@ -108,8 +108,17 @@
             color: #cbd5e1;
             cursor: not-allowed;
         }
+        
+        .banner-container {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 10px;
+        }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -131,7 +140,7 @@
             border: 1px solid #475569;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
         }
-        .timer-text { font-size: 45px; color: var(--accent); font-weight: 800; margin: 15px 0; }
+        .timer-text { font-size: 22px; color: var(--accent); font-weight: 800; margin: 15px 0; }
         
         .modal-btn {
             background: var(--accent);
@@ -162,6 +171,20 @@
             <button class="btn btn-withdraw" onclick="requestWithdraw()">Withdraw Stars</button>
         </div>
 
+        <!-- Top Banner Ad Unit (320x50) -->
+        <div class="banner-container">
+            <script>
+              atOptions = {
+                'key' : '474dfa2404f3e3106d7cef1dfb094f36',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+              };
+            </script>
+            <script src="https://outrightphiladelphia.com/474dfa2404f3e3106d7cef1dfb094f36/invoke.js"></script>
+        </div>
+
         <!-- Ad List Section -->
         <div class="section-title">
             <span>Available Ads</span>
@@ -170,18 +193,38 @@
         <div class="ad-list" id="ad-container">
             <p style="text-align: center; color: var(--text-secondary);">Loading ads...</p>
         </div>
-    </div>
 
-    <!-- 10 Seconds Wait Modal -->
-    <div class="modal" id="timerModal">
-        <div class="modal-content">
-            <h3 style="margin-top:0;">Watching Ad...</h3>
-            <p style="font-size: 13px; color: var(--text-secondary);">Please stay on the ad page to claim your reward safely.</p>
-            <div class="timer-text" id="countdown">10</div>
+        <!-- Middle Banner Ad Unit (300x250) -->
+        <div class="banner-container" style="margin-top: 20px;">
+            <script>
+              atOptions = {
+                'key' : '272a126ae4ed832542d83807035b6a48',
+                'format' : 'iframe',
+                'height' : 250,
+                'width' : 300,
+                'params' : {}
+              };
+            </script>
+            <script src="https://outrightphiladelphia.com/272a126ae4ed832542d83807035b6a48/invoke.js"></script>
+        </div>
+
+        <!-- Native Banner Ad Unit -->
+        <div class="banner-container" style="margin-top: 20px;">
+            <script async="async" data-cfasync="false" src="https://outrightphiladelphia.com/75cc1fe841c9030486848c1ee729f0a6/invoke.js"></script>
+            <div id="container-75cc1fe841c9030486848c1ee729f0a6"></div>
         </div>
     </div>
 
-    <!-- Generic Popup Modal (For Withdraw & Limits) -->
+    <!-- Ad Status Modal -->
+    <div class="modal" id="timerModal">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">Watching Ad...</h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">Please stay on the ad page for at least 10 seconds to claim your reward.</p>
+            <div class="timer-text" id="countdown">Checking...</div>
+        </div>
+    </div>
+
+    <!-- Generic Popup Modal -->
     <div class="modal" id="infoModal">
         <div class="modal-content">
             <h3 id="modalTitle" style="margin-top:0; color: var(--accent);">Notice</h3>
@@ -190,8 +233,14 @@
         </div>
     </div>
 
+    <!-- Popunder Ad Script Integration -->
+    <script src="https://outrightphiladelphia.com/48/63/7a/48637a035bd9e6bcb3faa59039389762.js"></script>
+
+    <!-- Social Bar Ad Script Integration -->
+    <script src="https://outrightphiladelphia.com/52/df/eb/52dfebd51d3ec1a1b6f04590c8fb8eea.js"></script>
+
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxjXD0nyAddddF9tsBUGxdWfczHdtU-zGjWuedW7HynxXo8eLqEvzd_ZEMjcMMnq8TF/exec"; // ඔයාගේ Web App URL එක
+        const API_URL = "https://script.google.com/macros/s/AKfycbxjXD0nyAddddF9tsBUGxdWfczHdtU-zGjWuedW7HynxXo8eLqEvzd_ZEMjcMMnq8TF/exec";
 
         let tg = window.Telegram.WebApp;
         tg.expand();
@@ -205,6 +254,10 @@
         let activeAdUrl = "";
         let activeAdId = "";
         let adsDataList = [];
+
+        let adStartTime = 0;
+        let isWaitingForAd = false;
+        const requiredWatchTime = 10; // Ad eke inna oni thappara ganana
 
         function loadAppData() {
             fetch(`${API_URL}?action=getData&id=${telegramId}&username=${username}`)
@@ -240,12 +293,10 @@
                 container.innerHTML += html;
             });
 
-            // Check timers for all ads
             updateAllTimers();
             setInterval(updateAllTimers, 1000);
         }
 
-        // 30 Minutes Cooldown Handler & Live Countdown Loop
         function updateAllTimers() {
             adsDataList.forEach(ad => {
                 let btn = document.getElementById(`btn_${ad.id}`);
@@ -253,7 +304,7 @@
 
                 let lastClickTime = parseInt(localStorage.getItem(`cooldown_${ad.id}`) || 0);
                 let now = new Date().getTime();
-                let cooldownDuration = 30 * 60 * 1000; // 30 Minutes in milliseconds
+                let cooldownDuration = 30 * 60 * 1000; 
                 let elapsed = now - lastClickTime;
 
                 if (elapsed < cooldownDuration) {
@@ -274,29 +325,40 @@
             activeAdId = adId;
             activeAdUrl = adUrl;
 
-            window.open(activeAdUrl, '_blank');
+            // Telegram Native URL opener
+            if (tg.openLink) {
+                tg.openLink(activeAdUrl);
+            } else {
+                window.open(activeAdUrl, '_blank');
+            }
+
+            adStartTime = new Date().getTime();
+            isWaitingForAd = true;
 
             let modal = document.getElementById("timerModal");
             modal.style.display = "flex";
-            let timeLeft = 10;
-            document.getElementById("countdown").innerText = timeLeft;
+            document.getElementById("countdown").innerText = "Checking...";
+        }
 
-            let countdownInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById("countdown").innerText = timeLeft;
+        // User Telegram App එකට ආපසු එද්දී Watch Time එක Check කරන Event එක
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === 'visible' && isWaitingForAd) {
+                isWaitingForAd = false;
+                
+                let returnTime = new Date().getTime();
+                let timeSpent = (returnTime - adStartTime) / 1000;
 
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    modal.style.display = "none";
-                    
-                    // Set 30 mins cooldown timestamp in LocalStorage
+                document.getElementById("timerModal").style.display = "none";
+
+                if (timeSpent >= requiredWatchTime) {
                     localStorage.setItem(`cooldown_${activeAdId}`, new Date().getTime());
                     updateAllTimers();
-
                     claimReward(activeAdId);
+                } else {
+                    showInfoModal("Ad Failed ❌", `Oya ad eke sampurnayen hitiye na. Karunakara ad page eke thappara ${requiredWatchTime}k wath inna.`);
                 }
-            }, 1000);
-        }
+            }
+        });
 
         function claimReward(adId) {
             fetch(`${API_URL}?action=clickAd&id=${telegramId}&adId=${adId}`)
@@ -312,7 +374,6 @@
                 });
         }
 
-        // Withdraw Request Function with Advanced Popups & Username Details
         function requestWithdraw() {
             let currentPoints = parseInt(document.getElementById("points-display").innerText);
             
@@ -321,13 +382,12 @@
                 return;
             }
 
-            // If points >= 1000, process withdraw request
-            fetch(`${API_URL}?action=withdraw&id=${telegramId}`)
+            fetch(`${API_URL}?action=withdraw&id=${telegramId}&username=${username}`)
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === "success") {
                         document.getElementById("points-display").innerText = data.points;
-                        showInfoModal("Withdrawal Pending", `✅ **Request Submitted Successfully!**<br><br>Account: @${username}<br>Status: <b>Pending</b><br>Your stars will be transferred within **1-3 working days** after verification.`);
+                        showInfoModal("Withdrawal Pending", `✅ **Request Submitted Successfully!**<br><br>Account: @${username}<br>Status: <b>Pending</b><br>Your withdrawal will be completed within **1-3 working days**.`);
                     } else {
                         showInfoModal("Notice", data.message);
                     }
@@ -344,7 +404,6 @@
             document.getElementById("infoModal").style.display = "none";
         }
 
-        // Initial Load
         loadAppData();
     </script>
 </body>
