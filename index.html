@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Star Earn Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text-color: #f8fafc;
+            --text-secondary: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 450px;
+        }
+        .profile-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        .profile-card h1 {
+            margin: 10px 0 5px 0;
+            color: var(--accent);
+            font-size: 32px;
+        }
+        .btn {
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-withdraw {
+            background: var(--success);
+            color: white;
+        }
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .ad-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ad-item {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #334155;
+        }
+        .ad-info h4 { margin: 0 0 5px 0; font-size: 16px; }
+        .ad-info p { margin: 0; font-size: 13px; color: var(--text-secondary); }
+        .ad-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        /* Modal Timer Style */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            width: 80%;
+            max-width: 300px;
+        }
+        .timer-text { font-size: 40px; color: var(--accent); font-weight: bold; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- User Profile & Balance -->
+        <div class="profile-card">
+            <p id="username-display" style="color: var(--text-secondary); margin: 0;">Loading user...</p>
+            <h1>⭐ <span id="points-display">0</span></h1>
+            <p style="margin: 0; font-size: 14px;">Telegram Stars Balance</p>
+            <button class="btn btn-withdraw" onclick="requestWithdraw()">Withdraw (Min 1000 Stars)</button>
+        </div>
+
+        <!-- Ad List Section -->
+        <div class="section-title">Available Ads (1 Star per Ad)</div>
+        <div class="ad-list" id="ad-container">
+            <p style="text-align: center; color: var(--text-secondary);">Loading ads...</p>
+        </div>
+    </div>
+
+    <!-- 10 Seconds Wait Modal -->
+    <div class="modal" id="timerModal">
+        <div class="modal-content">
+            <h3>Please Wait...</h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">Watch the ad completely to claim your star.</p>
+            <div class="timer-text" id="countdown">10</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxjXD0nyAddddF9tsBUGxdWfczHdtU-zGjWuedW7HynxXo8eLqEvzd_ZEMjcMMnq8TF/exec"; // මෙතනට ඔයාගේ Web App URL එක දාන්න
+
+        let tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let user = tg.initDataUnsafe.user;
+        let telegramId = user ? user.id : "9999999"; // Test සඳහා Default ID එකක්
+        let username = user ? user.username : "guest_user";
+
+        document.getElementById("username-display").innerText = "@" + username;
+
+        let activeAdUrl = "";
+        let activeAdId = "";
+
+        // Fetch User Data & Ads
+        function loadAppData() {
+            fetch(`${API_URL}?action=getData&id=${telegramId}&username=${username}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        document.getElementById("points-display").innerText = data.points;
+                        renderAds(data.ads);
+                    }
+                });
+        }
+
+        function renderAds(ads) {
+            let container = document.getElementById("ad-container");
+            container.innerHTML = "";
+            
+            if(ads.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: var(--text-secondary);">No ads available right now!</p>`;
+                return;
+            }
+
+            ads.forEach(ad => {
+                // Check localstorage for cooldown (2 hours = 7200000 ms)
+                let lastClickTime = localStorage.getItem(`cooldown_${ad.id}`) || 0;
+                let now = new Date().getTime();
+                let isCooldown = (now - lastClickTime) < 7200000;
+
+                let btnText = isCooldown ? "Wait 2h" : "View Ad";
+                let btnDisabled = isCooldown ? "disabled style='background:#475569; cursor:not-allowed;'" : "";
+
+                let html = `
+                    <div class="ad-item">
+                        <div class="ad-info">
+                            <h4>${ad.title}</h4>
+                            <p>Reward: ${ad.points} Star</p>
+                        </div>
+                        <button class="ad-btn" ${btnDisabled} onclick="startAdFlow('${ad.id}', '${ad.url}')">${btnText}</button>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        // Ad Click & 10s Timer Flow
+        function startAdFlow(adId, adUrl) {
+            activeAdId = adId;
+            activeAdUrl = adUrl;
+
+            // Open Ad in new tab
+            window.open(activeAdUrl, '_blank');
+
+            // Show 10s Modal Timer
+            let modal = document.getElementById("timerModal");
+            modal.style.display = "flex";
+            let timeLeft = 10;
+            document.getElementById("countdown").innerText = timeLeft;
+
+            let countdownInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById("countdown").innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    modal.style.display = "none";
+                    
+                    // Set Cooldown in LocalStorage for this specific ad (2 hours)
+                    localStorage.setItem(`cooldown_${activeAdId}`, new Date().getTime());
+
+                    // Send reward request to server
+                    claimReward(activeAdId);
+                }
+            }, 1000);
+        }
+
+        function claimReward(adId) {
+            fetch(`${API_URL}?action=clickAd&id=${telegramId}&adId=${adId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        document.getElementById("points-display").innerText = data.points;
+                        alert("🎉 Success! 1 Telegram Star added to your balance.");
+                        loadAppData();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        // Withdraw Request Function
+        function requestWithdraw() {
+            let currentPoints = parseInt(document.getElementById("points-display").innerText);
+            if (currentPoints < 1000) {
+                alert("❌ You need at least 1000 points to withdraw!");
+                return;
+            }
+
+            if(confirm("Do you want to request a withdrawal for 1000 Stars?")) {
+                fetch(`${API_URL}?action=withdraw&id=${telegramId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.status === "success") {
+                            document.getElementById("points-display").innerText = data.points;
+                            alert("✅ " + data.message);
+                        } else {
+                            alert("❌ " + data.message);
+                        }
+                    });
+            }
+        }
+
+        // Initial Load
+        loadAppData();
+    </script>
+</body>
+</html>
